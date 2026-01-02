@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Container, TextField, Button, Typography, Paper } from '@mui/material';
-import api from '../services/api';
+import { loginUser } from '../services/api';
 import { setToken } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -15,12 +15,12 @@ function Login() {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/login', { email, password });
+      const res = await loginUser(username, password);
       setToken(res.data.token);
-      navigate('/budgets');
+      navigate('/marketplace');
     } catch (err) {
       console.error(err);
-      setError('Invalid email or password, or an error has occurred.');
+      setError('Invalid username or password, or an error has occurred.');
     } finally {
       setLoading(false);
     }
@@ -40,10 +40,10 @@ function Login() {
         )}
         <TextField
           fullWidth
-          label="Email"
+          label="Username"
           sx={{ mb: 2 }}
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          value={username}
+          onChange={e => setUsername(e.target.value)}
           onKeyPress={e => e.key === 'Enter' && handleLogin()}
         />
         <TextField
@@ -58,18 +58,11 @@ function Login() {
         <Button variant="contained" fullWidth onClick={handleLogin}>
           Login
         </Button>
-        {/* Horizontal divider */}
         <hr style={{ margin: '20px 0' }} />
         <Typography variant="body2" sx={{ textAlign: 'center' }}>
           Don't have an account?{' '}
           <a href="/register" style={{ textDecoration: 'underline' }}>
             Register
-          </a>
-        </Typography>
-        <Typography variant="body2" sx={{ textAlign: 'center' }}>
-          Forgot your password?{' '}
-          <a href="/forgot-password" style={{ textDecoration: 'underline' }}>
-            Reset Password
           </a>
         </Typography>
       </Paper>

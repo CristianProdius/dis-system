@@ -1,19 +1,75 @@
+# Docker Compose for H100 GPU Deployment
+# This configuration runs the full capitalism simulation with AI agents
+# Requires: NVIDIA Docker runtime, H100 GPU
+
 version: '3.8'
 
 services:
-  # Frontend Demo Application
+  # ============================================
+  # vLLM Inference Server (H100)
+  # ============================================
+  vllm:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    ports:
+      - "8080:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    command: >
+      --model meta-llama/Llama-3.1-70B-Instruct
+      --tensor-parallel-size 1
+      --max-model-len 8192
+      --gpu-memory-utilization 0.9
+      --enable-chunked-prefill
+      --max-num-seqs 256
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - capitalism-net
+
+  # ============================================
+  # AI Agent Service
+  # ============================================
+  agent-service:
+    build:
+      context: ./services/agents
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - GATEWAY_URL=http://gateway:8000
+      - LLM_PROVIDER=vllm
+      - LLM_BASE_URL=http://vllm:8000
+      - LLM_MODEL=meta-llama/Llama-3.1-70B-Instruct
+      - BATCH_SIZE=20
+    volumes:
+      - simulation-data:/app/simulation_data
+    depends_on:
+      - gateway
+      - vllm
+    networks:
+      - capitalism-net
+
+  # ============================================
+  # Existing Services (from main docker-compose.yml)
+  # ============================================
   frontend:
     build: ./frontend
     ports:
       - "3000:80"
     depends_on:
       - gateway
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000
     networks:
       - capitalism-net
 
-  # API Gateway (Python FastAPI)
   gateway:
     build: ./gateway
     ports:
@@ -35,91 +91,72 @@ services:
     networks:
       - capitalism-net
 
-  # Marketplace Service - Replica 1
   marketplace-1:
     build: ./services/marketplace
-    ports:
-      - "3001:3001"
-    depends_on:
-      - mongo-marketplace
     environment:
       - PORT=3001
       - MONGODB_URI=mongodb://mongo-marketplace:27017/marketplace
       - INSTANCE_ID=marketplace-1
+    depends_on:
+      - mongo-marketplace
     networks:
       - capitalism-net
 
-  # Marketplace Service - Replica 2
   marketplace-2:
     build: ./services/marketplace
-    ports:
-      - "3002:3002"
-    depends_on:
-      - mongo-marketplace
     environment:
       - PORT=3002
       - MONGODB_URI=mongodb://mongo-marketplace:27017/marketplace
       - INSTANCE_ID=marketplace-2
+    depends_on:
+      - mongo-marketplace
     networks:
       - capitalism-net
 
-  # Marketplace Service - Replica 3
   marketplace-3:
     build: ./services/marketplace
-    ports:
-      - "3003:3003"
-    depends_on:
-      - mongo-marketplace
     environment:
       - PORT=3003
       - MONGODB_URI=mongodb://mongo-marketplace:27017/marketplace
       - INSTANCE_ID=marketplace-3
+    depends_on:
+      - mongo-marketplace
     networks:
       - capitalism-net
 
-  # Discourse Service - Replica 1
   discourse-1:
     build: ./services/discourse
-    ports:
-      - "4001:4001"
-    depends_on:
-      - postgres-discourse
     environment:
       - PORT=4001
       - DATABASE_URL=postgres://postgres:password@postgres-discourse:5432/discourse
       - INSTANCE_ID=discourse-1
+    depends_on:
+      - postgres-discourse
     networks:
       - capitalism-net
 
-  # Discourse Service - Replica 2
   discourse-2:
     build: ./services/discourse
-    ports:
-      - "4002:4002"
-    depends_on:
-      - postgres-discourse
     environment:
       - PORT=4002
       - DATABASE_URL=postgres://postgres:password@postgres-discourse:5432/discourse
       - INSTANCE_ID=discourse-2
+    depends_on:
+      - postgres-discourse
     networks:
       - capitalism-net
 
-  # Discourse Service - Replica 3
   discourse-3:
     build: ./services/discourse
-    ports:
-      - "4003:4003"
-    depends_on:
-      - postgres-discourse
     environment:
       - PORT=4003
       - DATABASE_URL=postgres://postgres:password@postgres-discourse:5432/discourse
       - INSTANCE_ID=discourse-3
+    depends_on:
+      - postgres-discourse
     networks:
       - capitalism-net
 
-  # MongoDB for Marketplace Service
   mongo-marketplace:
     image: mongo:6
     volumes:
@@ -127,7 +164,6 @@ services:
     networks:
       - capitalism-net
 
-  # PostgreSQL for Discourse Service
   postgres-discourse:
     image: postgres:15
     environment:
@@ -139,7 +175,6 @@ services:
     networks:
       - capitalism-net
 
-  # Redis for Gateway Caching and Auth
   redis:
     image: redis:7-alpine
     volumes:
@@ -147,7 +182,6 @@ services:
     networks:
       - capitalism-net
 
-  # Prometheus for Metrics Collection
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -155,14 +189,9 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "9090:9090"
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.enable-lifecycle'
     networks:
       - capitalism-net
 
-  # Grafana for Visualization
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -170,14 +199,10 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
-      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - grafana-data:/var/lib/grafana
-    depends_on:
-      - prometheus
     networks:
       - capitalism-net
 
@@ -191,3 +216,4 @@ volumes:
   redis-data:
   prometheus-data:
   grafana-data:
+  simulation-data:

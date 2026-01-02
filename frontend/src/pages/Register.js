@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Container, TextField, Button, Typography, Paper } from '@mui/material';
-import api from '../services/api';
+import { registerUser } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 function Register() {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
@@ -20,9 +19,17 @@ function Register() {
       setError('Passwords do not match.');
       return;
     }
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
     setLoading(true);
     try {
-      await api.post('/api/auth/register', { username, email, password });
+      await registerUser(username, password);
       setSuccess(true);
       setError(null);
       setTimeout(() => {
@@ -30,7 +37,7 @@ function Register() {
       }, 1500);
     } catch (err) {
       console.error(err);
-      setError('Registration failed. Maybe email is already in use, or an error has occurred.');
+      setError(err.response?.data?.detail || 'Registration failed. Username may already be taken.');
     } finally {
       setLoading(false);
     }
@@ -65,14 +72,6 @@ function Register() {
         />
         <TextField
           fullWidth
-          label="Email"
-          sx={{ mb: 2 }}
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          onKeyPress={e => e.key === 'Enter' && handleRegister()}
-        />
-        <TextField
-          fullWidth
           label="Password"
           type="password"
           sx={{ mb: 2 }}
@@ -92,7 +91,6 @@ function Register() {
         <Button variant="contained" fullWidth onClick={handleRegister}>
           Register
         </Button>
-        {/* Horizontal divider */}
         <hr style={{ margin: '20px 0' }} />
         <Typography variant="body2" sx={{ textAlign: 'center' }}>
           Already have an account?{' '}

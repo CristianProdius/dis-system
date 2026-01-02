@@ -1,0 +1,241 @@
+"""
+LLM Client for AI Agents
+Supports vLLM for high-performance inference on H100
+"""
+
+import asyncio
+import json
+import os
+from typing import Optional, Dict, Any, List
+from abc import ABC, abstractmethod
+import httpx
+
+
+class LLMClient(ABC):
+    """Abstract base class for LLM clients"""
+
+    @abstractmethod
+    async def generate(self, prompt: str, system_prompt: str, max_tokens: int = 1024) -> str:
+        pass
+
+    @abstractmethod
+    async def batch_generate(self, prompts: List[Dict[str, str]], max_tokens: int = 1024) -> List[str]:
+        pass
+
+
+class VLLMClient(LLMClient):
+    """
+    vLLM client for high-performance inference on H100
+    Supports continuous batching for 100+ concurrent agents
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8080",
+        model: str = "meta-llama/Llama-3.1-70B-Instruct",
+        timeout: float = 60.0
+    ):
+        self.base_url = base_url
+        self.model = model
+        self.timeout = timeout
+        self.client = httpx.AsyncClient(timeout=timeout)
+
+    async def generate(self, prompt: str, system_prompt: str, max_tokens: int = 1024) -> str:
+        """Generate a single response"""
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+
+        try:
+            response = await self.client.post(
+                f"{self.base_url}/v1/chat/completions",
+                json={
+                    "model": self.model,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"vLLM generation error: {e}")
+            return json.dumps({
+                "reasoning": "Error generating response",
+                "action": "WAIT",
+                "params": {},
+                "emotion": "confused"
+            })
+
+    async def batch_generate(
+        self,
+        prompts: List[Dict[str, str]],
+        max_tokens: int = 1024
+    ) -> List[str]:
+        """
+        Batch generate responses for multiple agents
+        vLLM handles continuous batching automatically for optimal GPU utilization
+        """
+        tasks = [
+            self.generate(p["prompt"], p["system_prompt"], max_tokens)
+            for p in prompts
+        ]
+        return await asyncio.gather(*tasks)
+
+    async def close(self):
+        await self.client.aclose()
+
+
+class OllamaClient(LLMClient):
+    """
+    Ollama client for local development on MacBook
+    Uses smaller models like Llama 3 8B or Mistral 7B
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:11434",
+        model: str = "llama3.1:8b",
+        timeout: float = 120.0
+    ):
+        self.base_url = base_url
+        self.model = model
+        self.timeout = timeout
+        self.client = httpx.AsyncClient(timeout=timeout)
+
+    async def generate(self, prompt: str, system_prompt: str, max_tokens: int = 1024) -> str:
+        """Generate using Ollama API"""
+        try:
+            response = await self.client.post(
+                f"{self.base_url}/api/chat",
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "stream": False,
+                    "options": {
+                        "num_predict": max_tokens,
+                        "temperature": 0.7,
+                    }
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["message"]["content"]
+        except Exception as e:
+            print(f"Ollama generation error: {e}")
+            return json.dumps({
+                "reasoning": "Error generating response",
+                "action": "WAIT",
+                "params": {},
+                "emotion": "confused"
+            })
+
+    async def batch_generate(
+        self,
+        prompts: List[Dict[str, str]],
+        max_tokens: int = 1024
+    ) -> List[str]:
+        """Batch generate (sequential for Ollama, parallel for vLLM)"""
+        # Ollama doesn't support true batching, so we run sequentially
+        # For production with many agents, use vLLM instead
+        results = []
+        for p in prompts:
+            result = await self.generate(p["prompt"], p["system_prompt"], max_tokens)
+            results.append(result)
+        return results
+
+    async def close(self):
+        await self.client.aclose()
+
+
+class AnthropicClient(LLMClient):
+    """
+    Claude API client for high-quality reasoning
+    Good for complex negotiations and strategy
+    """
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "claude-sonnet-4-20250514",
+        timeout: float = 60.0
+    ):
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        self.model = model
+        self.timeout = timeout
+        self.client = httpx.AsyncClient(
+            timeout=timeout,
+            headers={
+                "x-api-key": self.api_key,
+                "content-type": "application/json",
+                "anthropic-version": "2023-06-01"
+            }
+        )
+        self.base_url = "https://api.anthropic.com/v1"
+
+    async def generate(self, prompt: str, system_prompt: str, max_tokens: int = 1024) -> str:
+        """Generate using Claude API"""
+        try:
+            response = await self.client.post(
+                f"{self.base_url}/messages",
+                json={
+                    "model": self.model,
+                    "max_tokens": max_tokens,
+                    "system": system_prompt,
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ]
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["content"][0]["text"]
+        except Exception as e:
+            print(f"Anthropic generation error: {e}")
+            return json.dumps({
+                "reasoning": "Error generating response",
+                "action": "WAIT",
+                "params": {},
+                "emotion": "confused"
+            })
+
+    async def batch_generate(
+        self,
+        prompts: List[Dict[str, str]],
+        max_tokens: int = 1024
+    ) -> List[str]:
+        """Batch generate with rate limiting for API"""
+        tasks = [
+            self.generate(p["prompt"], p["system_prompt"], max_tokens)
+            for p in prompts
+        ]
+        # Add small delay between requests to respect rate limits
+        results = []
+        for task in tasks:
+            result = await task
+            results.append(result)
+            await asyncio.sleep(0.1)  # 100ms between requests
+        return results
+
+    async def close(self):
+        await self.client.aclose()
+
+
+def get_llm_client(provider: str = "vllm", **kwargs) -> LLMClient:
+    """Factory function to get the appropriate LLM client"""
+    providers = {
+        "vllm": VLLMClient,
+        "ollama": OllamaClient,
+        "anthropic": AnthropicClient,
+    }
+
+    if provider not in providers:
+        raise ValueError(f"Unknown provider: {provider}. Available: {list(providers.keys())}")
+
+    return providers[provider](**kwargs)

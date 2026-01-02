@@ -1,5 +1,5 @@
 # STAGE 1: Build React App
-FROM node:16-alpine AS build
+FROM node:18-alpine AS build
 
 # Set working directory
 WORKDIR /app
@@ -19,15 +19,17 @@ RUN npm run build
 # STAGE 2: Use Nginx to serve static content
 FROM nginx:alpine
 
-# Remove the default nginx page and replace with our app
+# Remove the default nginx page and config
 RUN rm -rf /usr/share/nginx/html/*
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy nginx configuration for SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files from the build stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Expose port 80 (default for Nginx)
+# Expose port 80
 EXPOSE 80
 
-# By default, nginx:alpine image uses the following CMD
-# So we don't need to specify it again:
-# CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]

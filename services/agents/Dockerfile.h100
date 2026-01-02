@@ -1,0 +1,41 @@
+# AI Agent Service - H100 Production Dockerfile
+# Uses NVIDIA CUDA for vLLM inference
+
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+WORKDIR /app
+
+# Install Python and dependencies
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    python3.11-venv \
+    gcc \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symlink for python
+RUN ln -s /usr/bin/python3.11 /usr/bin/python
+
+# Install vLLM and dependencies
+RUN pip install --no-cache-dir \
+    vllm==0.4.0 \
+    fastapi==0.108.0 \
+    uvicorn==0.25.0 \
+    httpx==0.26.0 \
+    pydantic==2.5.0 \
+    redis==5.0.1 \
+    chromadb==0.4.22 \
+    prometheus-client==0.19.0 \
+    python-dotenv==1.0.0
+
+# Copy source code
+COPY src ./src
+
+# Expose ports
+EXPOSE 8001  # Agent API
+EXPOSE 8080  # vLLM inference server
+
+# Default command runs the agent service
+# vLLM server should be started separately or via docker-compose
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8001"]

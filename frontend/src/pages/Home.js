@@ -1,32 +1,22 @@
 import React from 'react';
 import { Typography, Container, Grid, Card, CardContent, CardActionArea, Slide, Box } from '@mui/material';
 import { Link } from 'react-router-dom';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import GroupIcon from '@mui/icons-material/Group';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import StoreIcon from '@mui/icons-material/Store';
+import ForumIcon from '@mui/icons-material/Forum';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import HomeIcon from '@mui/icons-material/Home';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+import MonitorIcon from '@mui/icons-material/Monitor';
 import ApiIcon from '@mui/icons-material/Api';
+import ArchitectureIcon from '@mui/icons-material/AccountTree';
 
 function Home() {
   const pages = [
-    { title: 'Home', description: 'Welcome to Budget Management System.', link: '/', icon: <HomeIcon fontSize="large" /> },
-    { title: 'Dashboard', description: 'View and analyze your overall financial data.', link: '/dashboard', icon: <DashboardIcon fontSize="large" /> },
-    { title: 'Budgets', description: 'Create and manage all your budgets in one place.', link: '/budgets', icon: <AttachMoneyIcon fontSize="large" /> },
-    { title: 'Expenses', description: 'Track and modify expenses with ease.', link: '/expenses', icon: <ReceiptLongIcon fontSize="large" /> },
-    { title: 'Users', description: 'View and search users on the platform.', link: '/users', icon: <GroupIcon fontSize="large" /> },
-    { title: 'Profile', description: 'View and edit your personal profile.', link: '/profile', icon: <AccountCircleIcon fontSize="large" /> },
-    { title: 'Login', description: 'Access your account and manage your finances.', link: '/login', icon: <LoginIcon fontSize="large" /> },
-    { title: 'Register', description: 'Create a new account to get started.', link: '/register', icon: <PersonAddIcon fontSize="large" /> },
-    {
-      title: 'API',
-      description: 'View the API documentation.',
-      link: 'https://budget-management-backend-api.onrender.com/',
-      icon: <ApiIcon fontSize="large" />,
-    },
+    { title: 'Marketplace', description: 'Trade assets, innovations, services, and knowledge in a free market exchange.', link: '/marketplace', icon: <StoreIcon fontSize="large" /> },
+    { title: 'Discourse', description: 'Join economic, philosophical, and strategic discussions in public or private channels.', link: '/discourse', icon: <ForumIcon fontSize="large" /> },
+    { title: 'Login', description: 'Access your account to start trading and discussing.', link: '/login', icon: <LoginIcon fontSize="large" /> },
+    { title: 'Register', description: 'Create a new account to participate in the simulation.', link: '/register', icon: <PersonAddIcon fontSize="large" /> },
+    { title: 'Grafana', description: 'View real-time metrics, cache performance, and load balancer stats.', link: 'http://localhost:3004', icon: <MonitorIcon fontSize="large" />, external: true },
+    { title: 'API Docs', description: 'Explore the FastAPI auto-generated documentation.', link: 'http://localhost:8000/docs', icon: <ApiIcon fontSize="large" />, external: true },
   ];
 
   return (
@@ -34,20 +24,33 @@ function Home() {
       <Slide direction="down" in mountOnEnter unmountOnExit>
         <Box>
           <Typography variant="h3" mb={2} sx={{ fontWeight: 700 }}>
-            Welcome to Budget Management System
+            Capitalism Simulation
           </Typography>
-          <Typography variant="body1" mb={4} sx={{ fontSize: '1.1rem', maxWidth: 600, textAlign: 'left' }}>
-            Keep track of your budgets, manage expenses, and interact with other users. Our platform helps you stay on top of your finances effortlessly. Use
-            the navigation links to explore different sections.
+          <Typography variant="body1" mb={2} sx={{ fontSize: '1.1rem', maxWidth: 800 }}>
+            A distributed microservices platform demonstrating free market principles. Trade assets and innovations
+            in the marketplace, engage in economic discourse, and watch the system scale through load balancing.
           </Typography>
+
+          <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <ArchitectureIcon /> Architecture
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Python Gateway (FastAPI) + Redis Cache + Round Robin LB &rarr; Node.js Services (x3 replicas each) &rarr; MongoDB / PostgreSQL
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Prometheus + Grafana for monitoring | JWT Authentication | Docker Compose orchestration
+            </Typography>
+          </Box>
+
           <Grid container spacing={3}>
-            {pages.map((p, index) => (
+            {pages.map((p) => (
               <Grid item xs={12} sm={6} md={4} key={p.title}>
                 <Card
                   sx={{
                     ':hover': { transform: 'scale(1.03)' },
                     transition: 'transform 0.2s ease-in-out',
-                    minHeight: 200,
+                    minHeight: 180,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
@@ -56,7 +59,13 @@ function Home() {
                     p: 2,
                   }}
                 >
-                  <CardActionArea component={Link} to={p.link} sx={{ height: '100%' }}>
+                  <CardActionArea
+                    component={p.external ? 'a' : Link}
+                    to={p.external ? undefined : p.link}
+                    href={p.external ? p.link : undefined}
+                    target={p.external ? '_blank' : undefined}
+                    sx={{ height: '100%' }}
+                  >
                     <CardContent>
                       {p.icon}
                       <Typography variant="h6" sx={{ fontWeight: 600, mt: 2 }}>
@@ -73,9 +82,9 @@ function Home() {
           </Grid>
         </Box>
       </Slide>
-      <div style={{ borderBottom: '1px solid #ccc', margin: '20px' }}></div>
-      <Typography variant="body2" mt={4} sx={{ textAlign: 'center', opacity: 0.8 }}>
-        Ensure that you're logged in to access all features. Thank you for using our platform today! 🚀
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 3 }} />
+      <Typography variant="body2" sx={{ textAlign: 'center', opacity: 0.8, mb: 4 }}>
+        FAF.PAD 21.1 Autumn 2025 - Topic 10: Capitalism Simulation
       </Typography>
     </Container>
   );

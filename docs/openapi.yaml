@@ -1,0 +1,632 @@
+openapi: 3.0.3
+info:
+  title: Capitalism Simulation API
+  description: |
+    API Gateway for the Capitalism Simulation microservices platform.
+
+    ## Authentication
+    All endpoints except `/auth/register` and `/auth/login` require JWT authentication.
+    Include the token in the Authorization header: `Bearer <token>`
+
+    ## Services
+    - **Marketplace Service**: Free market exchange for assets, innovations, services, and knowledge
+    - **Discourse Service**: Communication platform for economic, philosophical, and strategic discussions
+  version: 1.0.0
+  contact:
+    name: FAF.PAD 21.1
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User registration and login
+  - name: Marketplace
+    description: Free market exchange operations
+  - name: Discourse
+    description: Communication and discussion channels
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              username: trader1
+              password: securepass123
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Username already exists
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: trader1
+              password: securepass123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+
+  /marketplace/list:
+    get:
+      tags:
+        - Marketplace
+      summary: List all marketplace items
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [asset, innovation, service, knowledge]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [available, sold, reserved]
+        - name: currency
+          in: query
+          schema:
+            type: string
+            enum: [USD, EUR, BTC, GOLD]
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of marketplace items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemListResponse'
+        '401':
+          description: Unauthorized
+
+  /marketplace/item/{id}:
+    get:
+      tags:
+        - Marketplace
+      summary: Get a specific marketplace item
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemDetailResponse'
+        '404':
+          description: Item not found
+
+  /marketplace/item:
+    post:
+      tags:
+        - Marketplace
+      summary: Create a new marketplace listing
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+            example:
+              name: Quantum Computing Patent
+              description: Revolutionary quantum algorithm for optimization problems
+              category: innovation
+              price: 50000
+              currency: USD
+              isPremium: true
+              tags: [quantum, algorithm, patent]
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Invalid request data
+
+  /marketplace/purchase:
+    post:
+      tags:
+        - Marketplace
+      summary: Purchase a marketplace item
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRequest'
+            example:
+              itemId: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Purchase successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseResponse'
+        '400':
+          description: Item not available or invalid request
+        '404':
+          description: Item not found
+
+  /discourse/channels:
+    get:
+      tags:
+        - Discourse
+      summary: List all discourse channels
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [public, private, sovereign]
+        - name: zone
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelListResponse'
+
+  /discourse/channel/{id}:
+    get:
+      tags:
+        - Discourse
+      summary: Get a channel with its posts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Channel details with posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelDetailResponse'
+        '404':
+          description: Channel not found
+
+  /discourse/channel:
+    post:
+      tags:
+        - Discourse
+      summary: Create a new channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChannelRequest'
+            example:
+              name: Free Market Economics
+              description: Discussions about Austrian economics and free markets
+              type: public
+              zone: economics
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+
+  /discourse/post:
+    post:
+      tags:
+        - Discourse
+      summary: Create a new post in a channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+            example:
+              channelId: 1
+              title: The Case for Sound Money
+              content: A comprehensive analysis of why sound money matters...
+              topic: economic
+      responses:
+        '201':
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '403':
+          description: Access denied to private channel
+        '404':
+          description: Channel not found
+
+  /status:
+    get:
+      tags:
+        - Health
+      summary: Gateway health check
+      responses:
+        '200':
+          description: Gateway is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /metrics:
+    get:
+      tags:
+        - Health
+      summary: Prometheus metrics endpoint
+      responses:
+        '200':
+          description: Prometheus format metrics
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user_id:
+          type: string
+        username:
+          type: string
+
+    Item:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [asset, innovation, service, knowledge]
+        price:
+          type: number
+        currency:
+          type: string
+          enum: [USD, EUR, BTC, GOLD]
+        sellerId:
+          type: string
+        status:
+          type: string
+          enum: [available, sold, reserved]
+        isPremium:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateItemRequest:
+      type: object
+      required:
+        - name
+        - description
+        - category
+        - price
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [asset, innovation, service, knowledge]
+        price:
+          type: number
+        currency:
+          type: string
+          enum: [USD, EUR, BTC, GOLD]
+          default: USD
+        isPremium:
+          type: boolean
+          default: false
+        tags:
+          type: array
+          items:
+            type: string
+
+    PurchaseRequest:
+      type: object
+      required:
+        - itemId
+      properties:
+        itemId:
+          type: string
+
+    PurchaseResponse:
+      type: object
+      properties:
+        transaction:
+          type: object
+        item:
+          $ref: '#/components/schemas/Item'
+
+    ItemListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ItemDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/Item'
+        - type: object
+          properties:
+            transactionHistory:
+              type: array
+              items:
+                type: object
+
+    Channel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [public, private, sovereign]
+        zone:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        channelId:
+          type: integer
+        authorId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        topic:
+          type: string
+          enum: [economic, philosophical, strategic, general]
+        isPinned:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateChannelRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [public, private, sovereign]
+          default: public
+        zone:
+          type: string
+
+    CreatePostRequest:
+      type: object
+      required:
+        - channelId
+        - content
+      properties:
+        channelId:
+          type: integer
+        content:
+          type: string
+        title:
+          type: string
+        topic:
+          type: string
+          enum: [economic, philosophical, strategic, general]
+          default: general
+
+    ChannelListResponse:
+      type: object
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Channel'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ChannelDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/Channel'
+        - type: object
+          properties:
+            posts:
+              type: array
+              items:
+                $ref: '#/components/schemas/Post'
+            postsPagination:
+              $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        cache:
+          type: object
+        load_balancer:
+          type: object

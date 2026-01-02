@@ -1,6 +1,0 @@
-{
-  "watch": ["index.js", "routes", "controllers", "services", "config", "models", "docs", "views"],
-  "ext": "js,json",
-  "ignore": ["node_modules"],
-  "exec": "node index.js"
-}

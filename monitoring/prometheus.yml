@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:8000']
+    metrics_path: /metrics
+
+  - job_name: 'marketplace'
+    static_configs:
+      - targets:
+          - 'marketplace-1:3001'
+          - 'marketplace-2:3002'
+          - 'marketplace-3:3003'
+    metrics_path: /metrics
+
+  - job_name: 'discourse'
+    static_configs:
+      - targets:
+          - 'discourse-1:4001'
+          - 'discourse-2:4002'
+          - 'discourse-3:4003'
+    metrics_path: /metrics

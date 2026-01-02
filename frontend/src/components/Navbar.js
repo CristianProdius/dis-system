@@ -7,13 +7,10 @@ import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import GroupIcon from '@mui/icons-material/Group';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+import StoreIcon from '@mui/icons-material/Store';
+import ForumIcon from '@mui/icons-material/Forum';
+import MonitorIcon from '@mui/icons-material/Monitor';
 import LogoutIcon from '@mui/icons-material/Logout';
-import api from '../services/api';
 
 function Navbar({ mode, setMode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -25,40 +22,10 @@ function Navbar({ mode, setMode }) {
     setMode(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Check token validity on location change and on mount
   useEffect(() => {
-    const checkToken = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setIsLoggedIn(false);
-        return;
-      }
-      try {
-        const res = await api.post(
-          '/api/auth/verify-token',
-          { token },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        if (res.data.valid) {
-          setIsLoggedIn(true);
-        } else {
-          localStorage.removeItem('token');
-          setIsLoggedIn(false);
-          navigate('/login');
-        }
-      } catch (err) {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
-        navigate('/login');
-      }
-    };
-    checkToken();
-  }, [navigate, location]);
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, [location]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -66,25 +33,26 @@ function Navbar({ mode, setMode }) {
     navigate('/login');
   };
 
-  // Define nav links
+  const openGrafana = () => {
+    window.open('http://localhost:3004', '_blank');
+  };
+
   const baseNavLinks = [
     { to: '/', label: 'Home', icon: <HomeIcon /> },
-    { to: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
-    { to: '/budgets', label: 'Budgets', icon: <AttachMoneyIcon /> },
-    { to: '/expenses', label: 'Expenses', icon: <ReceiptLongIcon /> },
-    { to: '/profile', label: 'Profile', icon: <AccountCircleIcon /> },
-    { to: '/users', label: 'Users', icon: <GroupIcon /> },
   ];
 
   let navLinks = [...baseNavLinks];
   if (isLoggedIn) {
+    navLinks.push({ to: '/marketplace', label: 'Marketplace', icon: <StoreIcon /> });
+    navLinks.push({ to: '/discourse', label: 'Discourse', icon: <ForumIcon /> });
+    navLinks.push({ to: '#', label: 'Grafana', icon: <MonitorIcon />, action: openGrafana });
     navLinks.push({ to: '#', label: 'Logout', icon: <LogoutIcon />, action: handleLogout });
   } else {
     navLinks.push({ to: '/login', label: 'Login', icon: <LoginIcon /> });
     navLinks.push({ to: '/register', label: 'Register', icon: <PersonAddIcon /> });
   }
 
-  const activeColor = '#8B4513'; // Brownish color for mobile active link
+  const activeColor = '#8B4513';
 
   return (
     <>
@@ -94,10 +62,10 @@ function Navbar({ mode, setMode }) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600, display: { xs: 'none', md: 'block' } }}>
-            Budget Management System
+            Capitalism Simulation
           </Typography>
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600, display: { xs: 'block', md: 'none' } }}>
-            Budget Management
+            CapSim
           </Typography>
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
             {navLinks.map(link => {
@@ -107,11 +75,10 @@ function Navbar({ mode, setMode }) {
                 mr: 1,
                 borderRadius: 0,
                 borderBottom: isActive ? '2px solid white' : 'none',
-                ...(isLogout && { color: 'red' }), // Apply red color if it's the logout button
+                ...(isLogout && { color: 'red' }),
               };
 
               if (link.action) {
-                // For logout
                 return (
                   <Button key={link.label} color="inherit" startIcon={link.icon} onClick={link.action} sx={buttonStyle}>
                     {link.label}
