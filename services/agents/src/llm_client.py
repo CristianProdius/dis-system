@@ -6,9 +6,27 @@ Supports vLLM for high-performance inference on H100
 import asyncio
 import json
 import os
+import re
 from typing import Optional, Dict, Any, List
 from abc import ABC, abstractmethod
 import httpx
+
+
+def extract_json_from_response(response: str) -> str:
+    """
+    Extract JSON from LLM responses that may contain <think> tags or other text.
+    Handles Qwen3 and other models that output chain-of-thought before JSON.
+    """
+    # Remove <think>...</think> blocks
+    response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
+
+    # Try to find JSON object in the response
+    json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response, flags=re.DOTALL)
+    if json_match:
+        return json_match.group()
+
+    # If no JSON found, return original (will fail parsing and trigger fallback)
+    return response.strip()
 
 
 class LLMClient(ABC):
@@ -60,7 +78,9 @@ class VLLMClient(LLMClient):
             )
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+            content = data["choices"][0]["message"]["content"]
+            # Extract JSON from response (handles <think> tags from Qwen3)
+            return extract_json_from_response(content)
         except Exception as e:
             print(f"vLLM generation error: {e}")
             return json.dumps({
