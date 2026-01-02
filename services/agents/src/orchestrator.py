@@ -11,6 +11,8 @@ Handles:
 import asyncio
 import json
 import random
+import sys
+import traceback
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -19,6 +21,13 @@ import httpx
 from .agent import Agent, AgentPersonality, AgentAction
 from .llm_client import LLMClient, get_llm_client
 from .data_exporter import DataExporter
+
+
+def log(message: str):
+    """Print with timestamp and immediate flush"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}", flush=True)
+    sys.stdout.flush()
 
 
 @dataclass
@@ -70,7 +79,8 @@ class AgentOrchestrator:
         self.http_client = httpx.AsyncClient(timeout=30.0)
         self.llm_client = get_llm_client(self.llm_provider, **self.llm_config)
         self.running = True
-        print(f"Orchestrator started with {self.llm_provider} LLM")
+        log(f"Orchestrator started with {self.llm_provider} LLM")
+        log(f"LLM config: {self.llm_config}")
 
     async def stop(self):
         """Shutdown the orchestrator"""
@@ -79,7 +89,7 @@ class AgentOrchestrator:
             await self.http_client.aclose()
         if self.llm_client:
             await self.llm_client.close()
-        print("Orchestrator stopped")
+        log("Orchestrator stopped")
 
     async def create_agent(
         self,
@@ -121,11 +131,11 @@ class AgentOrchestrator:
             agent.api_token = data["token"]
 
         except Exception as e:
-            print(f"Failed to register agent {name}: {e}")
+            log(f"Failed to register agent {name}: {e}")
             return None
 
         self.agents[agent.id] = agent
-        print(f"Created agent: {name} ({personality.value})")
+        log(f"Created agent: {name} ({personality.value})")
         return agent
 
     async def create_agent_population(
@@ -174,7 +184,7 @@ class AgentOrchestrator:
             # Small delay to avoid overwhelming the auth system
             await asyncio.sleep(0.05)
 
-        print(f"Created {len(agents)} agents")
+        log(f"Created {len(agents)} agents")
         return agents
 
     async def fetch_market_state(self) -> MarketState:
@@ -187,7 +197,7 @@ class AgentOrchestrator:
                 break
 
         if not token:
-            print("No valid agent tokens available")
+            log("No valid agent tokens available")
             return self.market_state
 
         headers = {"Authorization": f"Bearer {token}"}
@@ -215,7 +225,8 @@ class AgentOrchestrator:
             )
 
         except Exception as e:
-            print(f"Error fetching market state: {e}")
+            log(f"Error fetching market state: {e}")
+            traceback.print_exc()
 
         return self.market_state
 
@@ -266,7 +277,7 @@ class AgentOrchestrator:
                 return True  # No API call needed
 
             else:
-                print(f"Unknown action type: {action.action_type}")
+                log(f"Unknown action type: {action.action_type}")
                 return False
 
             action.success = response.status_code < 400
@@ -274,7 +285,7 @@ class AgentOrchestrator:
             return action.success
 
         except Exception as e:
-            print(f"Error executing action for {agent.name}: {e}")
+            log(f"Error executing action for {agent.name}: {e}")
             action.result = str(e)
             return False
 
@@ -314,17 +325,18 @@ class AgentOrchestrator:
 
                 actions.append((agent, action))
 
-            except json.JSONDecodeError:
-                print(f"Failed to parse response for {agent.name}: {response[:100]}")
+            except json.JSONDecodeError as e:
+                log(f"Failed to parse response for {agent.name}: {response[:200]}")
+                log(f"JSON error: {e}")
                 actions.append((agent, AgentAction(agent.id, "WAIT", {}, "Parse error")))
 
         return actions
 
     async def run_tick(self):
         """Run a single market tick"""
-        print(f"\n{'='*50}")
-        print(f"MARKET TICK {self.market_state.tick + 1}")
-        print(f"{'='*50}")
+        log(f"\n{'='*50}")
+        log(f"MARKET TICK {self.market_state.tick + 1}")
+        log(f"{'='*50}")
 
         # Fetch current market state
         await self.fetch_market_state()
@@ -354,7 +366,7 @@ class AgentOrchestrator:
                 success = await self.execute_agent_action(agent, action)
                 if success:
                     successful += 1
-                print(f"  {agent.name}: {action.action_type} - {'Success' if success else 'Failed'}")
+                log(f"  {agent.name}: {action.action_type} - {'Success' if success else 'Failed'}")
 
                 # Log action for data export
                 self.data_exporter.log_action(
@@ -368,11 +380,11 @@ class AgentOrchestrator:
                     wealth_after=agent.wealth
                 )
 
-        print(f"\nTick {self.market_state.tick} complete: {successful}/{len(all_actions)} actions succeeded")
+        log(f"\nTick {self.market_state.tick} complete: {successful}/{len(all_actions)} actions succeeded")
 
     async def run_simulation(self, ticks: int = 100):
         """Run the full simulation for a number of ticks"""
-        print(f"Starting simulation for {ticks} ticks with {len(self.agents)} agents")
+        log(f"Starting simulation for {ticks} ticks with {len(self.agents)} agents")
 
         # Set config for data export
         self.data_exporter.set_config({
@@ -390,32 +402,32 @@ class AgentOrchestrator:
             await self.run_tick()
             await asyncio.sleep(self.tick_interval)
 
-        print(f"\nSimulation complete after {self.market_state.tick} ticks")
+        log(f"\nSimulation complete after {self.market_state.tick} ticks")
 
         # Print final statistics
         self.print_statistics()
 
         # Auto-export data
-        print("\nExporting simulation data...")
+        log("\nExporting simulation data...")
         paths = self.data_exporter.export_all()
-        print(f"Data exported to: {paths}")
+        log(f"Data exported to: {paths}")
 
     def print_statistics(self):
         """Print simulation statistics"""
-        print("\n" + "=" * 50)
-        print("SIMULATION STATISTICS")
-        print("=" * 50)
+        log("\n" + "=" * 50)
+        log("SIMULATION STATISTICS")
+        log("=" * 50)
 
         if not self.agents:
-            print("No agents in simulation")
+            log("No agents in simulation")
             return
 
         wealths = [a.wealth for a in self.agents.values()]
-        print(f"Total Agents: {len(self.agents)}")
-        print(f"Total Wealth: ${sum(wealths):,.2f}")
-        print(f"Average Wealth: ${sum(wealths)/len(wealths):,.2f}")
-        print(f"Richest Agent: ${max(wealths):,.2f}")
-        print(f"Poorest Agent: ${min(wealths):,.2f}")
+        log(f"Total Agents: {len(self.agents)}")
+        log(f"Total Wealth: ${sum(wealths):,.2f}")
+        log(f"Average Wealth: ${sum(wealths)/len(wealths):,.2f}")
+        log(f"Richest Agent: ${max(wealths):,.2f}")
+        log(f"Poorest Agent: ${min(wealths):,.2f}")
 
         # Wealth by personality
         by_personality = {}
@@ -425,7 +437,7 @@ class AgentOrchestrator:
                 by_personality[p] = []
             by_personality[p].append(agent.wealth)
 
-        print("\nWealth by Personality:")
+        log("\nWealth by Personality:")
         for personality, wealths in by_personality.items():
             avg = sum(wealths) / len(wealths)
-            print(f"  {personality}: ${avg:,.2f} avg ({len(wealths)} agents)")
+            log(f"  {personality}: ${avg:,.2f} avg ({len(wealths)} agents)")

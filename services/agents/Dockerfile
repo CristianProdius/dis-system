@@ -4,6 +4,10 @@
 
 FROM python:3.11-slim
 
+# Ensure Python output is sent directly to terminal without buffering
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
 WORKDIR /app
 
 # Install system dependencies

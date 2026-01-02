@@ -90,12 +90,13 @@ class VLLMClient(LLMClient):
         self,
         base_url: str = "http://localhost:8080",
         model: str = "meta-llama/Llama-3.1-70B-Instruct",
-        timeout: float = 60.0
+        timeout: float = 120.0  # Increased timeout for large batches
     ):
         self.base_url = base_url
         self.model = model
         self.timeout = timeout
         self.client = httpx.AsyncClient(timeout=timeout)
+        print(f"[VLLMClient] Initialized with base_url={base_url}, model={model}, timeout={timeout}", flush=True)
 
     async def generate(self, prompt: str, system_prompt: str, max_tokens: int = 1024) -> str:
         """Generate a single response"""

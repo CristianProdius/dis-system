@@ -25,7 +25,8 @@ services:
       # Connect to host's vLLM container (running outside docker-compose)
       - LLM_BASE_URL=http://host.docker.internal:8000
       - LLM_MODEL=qwen3-32b
-      - BATCH_SIZE=20
+      # Reduced batch size to prevent vLLM timeouts
+      - BATCH_SIZE=10
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
