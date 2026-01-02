@@ -112,18 +112,29 @@ MEMORY CONTEXT:
 {self.memory.get_context_summary()}
 
 AVAILABLE ACTIONS:
-1. LIST_ITEM: Create a new item to sell (name, description, category, price)
-2. PURCHASE: Buy an item from the marketplace (itemId)
-3. CREATE_CHANNEL: Start a new discussion channel (name, type, description)
-4. POST_MESSAGE: Post in a channel (channelId, content, topic)
-5. OBSERVE: Watch the market without acting
-6. WAIT: Do nothing this turn
+1. LIST_ITEM: Create a new item to sell
+   params: {{"name": "string", "description": "string", "category": "asset|innovation|service|knowledge", "price": number, "currency": "USD"}}
 
-Respond with a JSON object containing:
+2. PURCHASE: Buy an item from the marketplace
+   params: {{"itemId": "string (the _id from marketplace items)"}}
+
+3. CREATE_CHANNEL: Start a new discussion channel
+   params: {{"name": "string", "description": "string", "type": "public|private|sovereign"}}
+
+4. POST_MESSAGE: Post in a channel
+   params: {{"channelId": number, "title": "string", "content": "string", "topic": "economic|philosophical|strategic"}}
+
+5. OBSERVE: Watch the market without acting
+   params: {{}}
+
+6. WAIT: Do nothing this turn
+   params: {{}}
+
+IMPORTANT: Respond ONLY with valid JSON, no other text. Format:
 {{
-    "reasoning": "Your thought process",
+    "reasoning": "Your brief thought process",
     "action": "ACTION_NAME",
-    "params": {{...action parameters...}},
+    "params": {{...exact parameters as shown above...}},
     "emotion": "current emotional state"
 }}
 """
