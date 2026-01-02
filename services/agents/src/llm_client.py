@@ -17,11 +17,50 @@ def extract_json_from_response(response: str) -> str:
     Extract JSON from LLM responses that may contain <think> tags or other text.
     Handles Qwen3 and other models that output chain-of-thought before JSON.
     """
-    # Remove <think>...</think> blocks
+    # Remove <think>...</think> blocks (complete or incomplete)
     response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
+    # Also remove unclosed <think> tags
+    response = re.sub(r'<think>.*$', '', response, flags=re.DOTALL)
 
-    # Try to find JSON object in the response
-    json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response, flags=re.DOTALL)
+    # Find the first { and try to extract balanced JSON
+    start_idx = response.find('{')
+    if start_idx == -1:
+        return response.strip()
+
+    # Count braces to find matching closing brace
+    depth = 0
+    in_string = False
+    escape_next = False
+
+    for i, char in enumerate(response[start_idx:], start=start_idx):
+        if escape_next:
+            escape_next = False
+            continue
+        if char == '\\' and in_string:
+            escape_next = True
+            continue
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0:
+                json_str = response[start_idx:i+1]
+                # Validate it's actual JSON
+                try:
+                    json.loads(json_str)
+                    return json_str
+                except json.JSONDecodeError:
+                    # Try to clean it up
+                    pass
+                return json_str
+
+    # If we couldn't find balanced braces, try regex as fallback
+    json_match = re.search(r'\{.*\}', response, flags=re.DOTALL)
     if json_match:
         return json_match.group()
 
