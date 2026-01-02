@@ -90,16 +90,21 @@ class VLLMClient(LLMClient):
         self,
         base_url: str = "http://localhost:8080",
         model: str = "meta-llama/Llama-3.1-70B-Instruct",
-        timeout: float = 120.0  # Increased timeout for large batches
+        timeout: float = 120.0,  # Increased timeout for large batches
+        max_tokens: int = 2048,  # Increased to allow thinking + JSON response
     ):
         self.base_url = base_url
         self.model = model
         self.timeout = timeout
+        self.max_tokens = max_tokens
         self.client = httpx.AsyncClient(timeout=timeout)
-        print(f"[VLLMClient] Initialized with base_url={base_url}, model={model}, timeout={timeout}", flush=True)
+        print(f"[VLLMClient] Initialized with base_url={base_url}, model={model}, timeout={timeout}, max_tokens={max_tokens}", flush=True)
 
-    async def generate(self, prompt: str, system_prompt: str, max_tokens: int = 1024) -> str:
+    async def generate(self, prompt: str, system_prompt: str, max_tokens: int = None) -> str:
         """Generate a single response"""
+        # Use instance max_tokens if not specified
+        tokens = max_tokens if max_tokens is not None else self.max_tokens
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
@@ -111,7 +116,7 @@ class VLLMClient(LLMClient):
                 json={
                     "model": self.model,
                     "messages": messages,
-                    "max_tokens": max_tokens,
+                    "max_tokens": tokens,
                     "temperature": 0.7,
                     "top_p": 0.9,
                 }

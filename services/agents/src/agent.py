@@ -130,13 +130,13 @@ AVAILABLE ACTIONS:
 6. WAIT: Do nothing this turn
    params: {{}}
 
-IMPORTANT: Respond ONLY with valid JSON, no other text. Format:
-{{
-    "reasoning": "Your brief thought process",
-    "action": "ACTION_NAME",
-    "params": {{...exact parameters as shown above...}},
-    "emotion": "current emotional state"
-}}
+CRITICAL INSTRUCTIONS:
+- Respond with ONLY valid JSON, nothing else
+- Keep "reasoning" to ONE short sentence (max 15 words)
+- Do NOT use markdown, do NOT explain, just output JSON
+
+Format:
+{{"reasoning": "short reason", "action": "ACTION_NAME", "params": {{...}}, "emotion": "emotion"}}
 """
 
     def get_decision_prompt(self, market_state: Dict[str, Any]) -> str:
