@@ -138,14 +138,16 @@ class VLLMClient(LLMClient):
     async def batch_generate(
         self,
         prompts: List[Dict[str, str]],
-        max_tokens: int = 1024
+        max_tokens: int = None
     ) -> List[str]:
         """
         Batch generate responses for multiple agents
         vLLM handles continuous batching automatically for optimal GPU utilization
         """
+        # Use instance max_tokens if not specified
+        tokens = max_tokens if max_tokens is not None else self.max_tokens
         tasks = [
-            self.generate(p["prompt"], p["system_prompt"], max_tokens)
+            self.generate(p["prompt"], p["system_prompt"], tokens)
             for p in prompts
         ]
         return await asyncio.gather(*tasks)
