@@ -145,13 +145,14 @@ class AgentOrchestrator:
     ) -> List[Agent]:
         """Create a population of agents with diverse personalities"""
         if personality_distribution is None:
+            # Increased philosopher and innovator for more discourse activity
             personality_distribution = {
-                AgentPersonality.AGGRESSIVE_TRADER: 0.2,
-                AgentPersonality.CONSERVATIVE_INVESTOR: 0.2,
+                AgentPersonality.AGGRESSIVE_TRADER: 0.15,
+                AgentPersonality.CONSERVATIVE_INVESTOR: 0.15,
                 AgentPersonality.MARKET_MAKER: 0.15,
-                AgentPersonality.OPPORTUNIST: 0.25,
-                AgentPersonality.PHILOSOPHER: 0.1,
-                AgentPersonality.INNOVATOR: 0.1,
+                AgentPersonality.OPPORTUNIST: 0.20,
+                AgentPersonality.PHILOSOPHER: 0.20,  # Increased from 0.1 for more discourse
+                AgentPersonality.INNOVATOR: 0.15,    # Increased from 0.1
             }
 
         agents = []
@@ -217,10 +218,25 @@ class AgentOrchestrator:
             )
             channels_data = channels_response.json() if channels_response.status_code == 200 else {"channels": []}
 
+            # Fetch recent posts from top 3 channels so agents can see discussions
+            channels_list = channels_data.get("channels", [])
+            for channel in channels_list[:3]:  # Only fetch from first 3 channels
+                try:
+                    channel_detail = await self.http_client.get(
+                        f"{self.gateway_url}/discourse/channel/{channel['id']}",
+                        headers=headers
+                    )
+                    if channel_detail.status_code == 200:
+                        detail_data = channel_detail.json()
+                        # Add recent posts to channel data (limit to 5 most recent)
+                        channel["recent_posts"] = detail_data.get("posts", [])[:5]
+                except Exception:
+                    pass  # Skip if fetching channel details fails
+
             self.market_state = MarketState(
                 tick=self.market_state.tick + 1,
                 items=items_data.get("items", []),
-                channels=channels_data.get("channels", []),
+                channels=channels_list,
                 timestamp=datetime.now().isoformat()
             )
 

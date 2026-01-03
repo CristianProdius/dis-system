@@ -8,10 +8,9 @@ class MarketplaceService {
     if (filters.category) {
       query.category = filters.category;
     }
+    // Only filter by status if explicitly provided (allows fetching all items)
     if (filters.status) {
       query.status = filters.status;
-    } else {
-      query.status = 'available';
     }
     if (filters.currency) {
       query.currency = filters.currency;
@@ -90,20 +89,28 @@ class MarketplaceService {
   }
 
   async purchaseItem(itemId, buyerId) {
-    const item = await Item.findById(itemId);
-
-    if (!item) {
+    // First check if buyer is trying to buy their own item
+    const itemCheck = await Item.findById(itemId).lean();
+    if (!itemCheck) {
       throw new Error('Item not found');
     }
-
-    if (item.status !== 'available') {
-      throw new Error('Item is not available for purchase');
-    }
-
-    if (item.sellerId === buyerId) {
+    if (itemCheck.sellerId === buyerId) {
       throw new Error('Cannot purchase your own item');
     }
 
+    // Atomic update - only succeeds if status is still 'available'
+    // This prevents race conditions when multiple agents try to buy same item
+    const item = await Item.findOneAndUpdate(
+      { _id: itemId, status: 'available' },
+      { status: 'sold' },
+      { new: true }
+    );
+
+    if (!item) {
+      throw new Error('Item is not available for purchase (already sold)');
+    }
+
+    // Create transaction record
     const transaction = new Transaction({
       itemId: item._id,
       buyerId,
@@ -114,12 +121,7 @@ class MarketplaceService {
       status: 'completed',
     });
 
-    item.status = 'sold';
-
-    await Promise.all([
-      transaction.save(),
-      item.save(),
-    ]);
+    await transaction.save();
 
     return {
       transaction: transaction.toObject(),

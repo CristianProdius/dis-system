@@ -47,7 +47,7 @@ function Marketplace() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [filter, setFilter] = useState({ category: '', status: 'available' });
+  const [filter, setFilter] = useState({ category: '', status: '' }); // Show all items by default
 
   const [newItem, setNewItem] = useState({
     name: '',
@@ -174,6 +174,18 @@ function Marketplace() {
             ))}
           </Select>
         </FormControl>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={filter.status}
+            label="Status"
+            onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+          >
+            <MenuItem value="">All Items</MenuItem>
+            <MenuItem value="available">Available</MenuItem>
+            <MenuItem value="sold">Sold</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
       {loading ? (
@@ -186,51 +198,82 @@ function Marketplace() {
         </Typography>
       ) : (
         <Grid container spacing={3}>
-          {items.map((item) => (
-            <Grid item xs={12} sm={6} md={4} key={item._id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+          {items.map((item) => {
+            const isSold = item.status === 'sold';
+            return (
+              <Grid item xs={12} sm={6} md={4} key={item._id}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    opacity: isSold ? 0.6 : 1,
+                    bgcolor: isSold ? 'action.disabledBackground' : 'background.paper',
+                    position: 'relative',
+                  }}
+                >
+                  {isSold && (
                     <Chip
-                      label={item.category}
-                      size="small"
-                      color={categoryColors[item.category] || 'default'}
+                      label="SOLD"
+                      color="error"
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        fontWeight: 'bold',
+                        zIndex: 1,
+                      }}
                     />
-                    {item.isPremium && (
-                      <Chip label="Premium" size="small" color="warning" variant="outlined" />
-                    )}
-                  </Box>
-                  <Typography variant="h6" gutterBottom>
-                    {item.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {item.description}
-                  </Typography>
-                  <Typography variant="h5" color="primary">
-                    {item.price} {item.currency}
-                  </Typography>
-                  {item.tags && item.tags.length > 0 && (
-                    <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {item.tags.map((tag, i) => (
-                        <Chip key={i} label={tag} size="small" variant="outlined" />
-                      ))}
-                    </Box>
                   )}
-                </CardContent>
-                <CardActions>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<CartIcon />}
-                    onClick={() => handlePurchase(item._id)}
-                    disabled={item.status !== 'available'}
-                  >
-                    {item.status === 'available' ? 'Purchase' : 'Sold'}
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Chip
+                        label={item.category}
+                        size="small"
+                        color={categoryColors[item.category] || 'default'}
+                      />
+                      {item.isPremium && (
+                        <Chip label="Premium" size="small" color="warning" variant="outlined" />
+                      )}
+                    </Box>
+                    <Typography variant="h6" gutterBottom sx={{ color: isSold ? 'text.disabled' : 'text.primary' }}>
+                      {item.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      {item.description}
+                    </Typography>
+                    <Typography variant="h5" sx={{ color: isSold ? 'text.disabled' : 'primary.main', textDecoration: isSold ? 'line-through' : 'none' }}>
+                      {item.price} {item.currency}
+                    </Typography>
+                    {item.tags && item.tags.length > 0 && (
+                      <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {item.tags.map((tag, i) => (
+                          <Chip key={i} label={tag} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                    )}
+                    {isSold && item.sellerId && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        Sold by: {item.sellerId}
+                      </Typography>
+                    )}
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      fullWidth
+                      variant={isSold ? "outlined" : "contained"}
+                      startIcon={<CartIcon />}
+                      onClick={() => handlePurchase(item._id)}
+                      disabled={isSold}
+                      color={isSold ? "inherit" : "primary"}
+                    >
+                      {isSold ? 'Sold Out' : 'Purchase'}
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
 

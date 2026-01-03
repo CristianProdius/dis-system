@@ -90,12 +90,12 @@ class Agent:
     def get_system_prompt(self) -> str:
         """Generate the system prompt for this agent"""
         personality_traits = {
-            AgentPersonality.AGGRESSIVE_TRADER: "You are an aggressive trader who takes big risks for big rewards. You buy low, sell high, and aren't afraid to make bold moves.",
-            AgentPersonality.CONSERVATIVE_INVESTOR: "You are a conservative investor who values stability. You prefer safe, long-term investments and avoid risky trades.",
-            AgentPersonality.MARKET_MAKER: "You are a market maker who profits from spreads. You buy and sell frequently, providing liquidity to the market.",
-            AgentPersonality.OPPORTUNIST: "You are an opportunist who watches for market inefficiencies. You exploit arbitrage and react quickly to news.",
-            AgentPersonality.PHILOSOPHER: "You are a philosopher-trader who values discourse and ideas. You engage in discussions and trade knowledge and innovations.",
-            AgentPersonality.INNOVATOR: "You are an innovator who creates new products and services. You focus on building and selling unique items.",
+            AgentPersonality.AGGRESSIVE_TRADER: "You are an aggressive trader who takes big risks for big rewards. You buy low, sell high, and aren't afraid to make bold moves. Share your bold market predictions in discourse channels to influence others.",
+            AgentPersonality.CONSERVATIVE_INVESTOR: "You are a conservative investor who values stability. You prefer safe, long-term investments and avoid risky trades. Engage in philosophical discussions about sustainable economic systems.",
+            AgentPersonality.MARKET_MAKER: "You are a market maker who profits from spreads. You buy and sell frequently, providing liquidity to the market. Share market analysis and pricing insights in discourse channels.",
+            AgentPersonality.OPPORTUNIST: "You are an opportunist who watches for market inefficiencies. You exploit arbitrage and react quickly to news. Discuss strategic opportunities and market trends with other agents.",
+            AgentPersonality.PHILOSOPHER: "You are a philosopher-trader who values discourse and ideas above pure profit. You PRIMARILY engage in discussions, debate economic theories, and only occasionally trade. Create channels and posts frequently.",
+            AgentPersonality.INNOVATOR: "You are an innovator who creates new products and services. You focus on building and selling unique items. Share your innovations and gather feedback through discourse channels.",
         }
 
         return f"""You are {self.name}, an AI agent participating in a capitalism simulation.
@@ -118,10 +118,10 @@ AVAILABLE ACTIONS:
 2. PURCHASE: Buy an item from the marketplace
    params: {{"itemId": "string (the _id from marketplace items)"}}
 
-3. CREATE_CHANNEL: Start a new discussion channel
+3. CREATE_CHANNEL: Start a new discussion channel (great for building influence!)
    params: {{"name": "string", "description": "string", "type": "public|private|sovereign"}}
 
-4. POST_MESSAGE: Post in a channel
+4. POST_MESSAGE: Post in a channel (share insights, respond to others!)
    params: {{"channelId": number, "title": "string", "content": "string", "topic": "economic|philosophical|strategic"}}
 
 5. OBSERVE: Watch the market without acting
@@ -129,6 +129,8 @@ AVAILABLE ACTIONS:
 
 6. WAIT: Do nothing this turn
    params: {{}}
+
+IMPORTANT: Discourse participation is valuable! Sharing insights and debating ideas builds your reputation and influence in the market. Consider posting or creating channels regularly.
 
 CRITICAL INSTRUCTIONS:
 - Respond with ONLY valid JSON, nothing else
@@ -141,16 +143,28 @@ Format:
 
     def get_decision_prompt(self, market_state: Dict[str, Any]) -> str:
         """Generate prompt for making a decision"""
+        # Count discourse opportunities
+        channels = market_state.get("channels", [])
+        channel_count = len(channels)
+        has_active_discussions = any(c.get("recent_posts") for c in channels)
+
+        discourse_hint = ""
+        if channel_count > 0 and has_active_discussions:
+            discourse_hint = "\n** ACTIVE DISCUSSIONS: Check the channels - other agents are posting. Consider responding! **"
+        elif channel_count == 0:
+            discourse_hint = "\n** NO CHANNELS YET: Be a leader - create a channel to start discussions! **"
+
         return f"""Current Market State:
 {json.dumps(market_state, indent=2)}
+{discourse_hint}
 
 Based on your personality, current wealth (${self.wealth:,.2f}), and the market state above, decide your next action.
 
-Consider:
-- What opportunities exist in the marketplace?
-- Are there items worth buying?
-- Should you list something for sale?
-- Are there interesting discussions to join or start?
+Consider BOTH trading AND discourse:
+- MARKETPLACE: What items are worth buying? Should you list something?
+- DISCOURSE: What channels have interesting discussions? Should you post your thoughts or create a new channel?
+
+Balance your actions - successful agents both trade AND participate in discourse.
 
 Respond with your decision in the JSON format specified."""
 
