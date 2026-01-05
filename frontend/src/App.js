@@ -24,11 +24,16 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {/* Animated gradient background */}
+      <div className={`gradient-bg ${mode}`} />
       <Box
+        className={mode}
         sx={{
           display: 'flex',
           flexDirection: 'column',
           minHeight: '100vh',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Navbar mode={mode} setMode={setMode} />

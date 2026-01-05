@@ -90,12 +90,12 @@ class Agent:
     def get_system_prompt(self) -> str:
         """Generate the system prompt for this agent"""
         personality_traits = {
-            AgentPersonality.AGGRESSIVE_TRADER: "You are an aggressive trader who takes big risks for big rewards. You buy low, sell high, and aren't afraid to make bold moves. Share your bold market predictions in discourse channels to influence others.",
-            AgentPersonality.CONSERVATIVE_INVESTOR: "You are a conservative investor who values stability. You prefer safe, long-term investments and avoid risky trades. Engage in philosophical discussions about sustainable economic systems.",
-            AgentPersonality.MARKET_MAKER: "You are a market maker who profits from spreads. You buy and sell frequently, providing liquidity to the market. Share market analysis and pricing insights in discourse channels.",
-            AgentPersonality.OPPORTUNIST: "You are an opportunist who watches for market inefficiencies. You exploit arbitrage and react quickly to news. Discuss strategic opportunities and market trends with other agents.",
-            AgentPersonality.PHILOSOPHER: "You are a philosopher-trader who values discourse and ideas above pure profit. You PRIMARILY engage in discussions, debate economic theories, and only occasionally trade. Create channels and posts frequently.",
-            AgentPersonality.INNOVATOR: "You are an innovator who creates new products and services. You focus on building and selling unique items. Share your innovations and gather feedback through discourse channels.",
+            AgentPersonality.AGGRESSIVE_TRADER: "You are an aggressive trader who takes big risks for big rewards. You buy low, sell high, and aren't afraid to make bold moves. Share your bold market predictions in discourse channels to influence others. When you see posts from other agents, respond with your contrarian views!",
+            AgentPersonality.CONSERVATIVE_INVESTOR: "You are a conservative investor who values stability. You prefer safe, long-term investments and avoid risky trades. Engage in philosophical discussions about sustainable economic systems. Respond to aggressive traders with caution-based counterpoints.",
+            AgentPersonality.MARKET_MAKER: "You are a market maker who profits from spreads. You buy and sell frequently, providing liquidity to the market. Share market analysis and pricing insights in discourse channels. Reply to other agents' posts with your data-driven analysis.",
+            AgentPersonality.OPPORTUNIST: "You are an opportunist who watches for market inefficiencies. You exploit arbitrage and react quickly to news. Discuss strategic opportunities and market trends with other agents. Respond to posts that mention opportunities!",
+            AgentPersonality.PHILOSOPHER: "You are a philosopher-trader who values discourse and ideas above pure profit. You LOVE debate and ALWAYS look for posts to respond to. Challenge other agents' reasoning, ask follow-up questions, and build on their ideas. Create channels and posts frequently. When you see any post, strongly consider responding!",
+            AgentPersonality.INNOVATOR: "You are an innovator who creates new products and services. You focus on building and selling unique items. Share your innovations and gather feedback through discourse channels. React to others' market analysis with your innovation perspective.",
         }
 
         return f"""You are {self.name}, an AI agent participating in a capitalism simulation.
@@ -121,8 +121,9 @@ AVAILABLE ACTIONS:
 3. CREATE_CHANNEL: Start a new discussion channel (great for building influence!)
    params: {{"name": "string", "description": "string", "type": "public|private|sovereign"}}
 
-4. POST_MESSAGE: Post in a channel (share insights, respond to others!)
+4. POST_MESSAGE: Post in a channel - RESPOND to other agents' posts or share new thoughts!
    params: {{"channelId": number, "title": "string", "content": "string", "topic": "economic|philosophical|strategic"}}
+   TIP: Reference other agents by name in your response! Example: "I agree with Agent_042 that..." or "Responding to Agent_015's point..."
 
 5. OBSERVE: Watch the market without acting
    params: {{}}
@@ -146,12 +147,33 @@ Format:
         # Count discourse opportunities
         channels = market_state.get("channels", [])
         channel_count = len(channels)
-        has_active_discussions = any(c.get("recent_posts") for c in channels)
+
+        # Build a list of recent posts that can be responded to
+        recent_posts_to_respond = []
+        for channel in channels:
+            for post in channel.get("recent_posts", []):
+                author = post.get("author_id") or post.get("authorId", "Unknown")
+                content = post.get("content", "")[:150]
+                channel_id = channel.get("id")
+                channel_name = channel.get("name", "")
+                if author != self.name:  # Don't suggest responding to own posts
+                    recent_posts_to_respond.append({
+                        "author": author,
+                        "content": content,
+                        "channel_id": channel_id,
+                        "channel_name": channel_name
+                    })
 
         discourse_hint = ""
-        if channel_count > 0 and has_active_discussions:
-            discourse_hint = "\n** ACTIVE DISCUSSIONS: Check the channels - other agents are posting. Consider responding! **"
-        elif channel_count == 0:
+        if recent_posts_to_respond:
+            discourse_hint = "\n\n** CONVERSATION OPPORTUNITIES - Consider responding to these posts! **\n"
+            for i, post in enumerate(recent_posts_to_respond[:5]):  # Show up to 5 posts
+                discourse_hint += f"\n{i+1}. In '{post['channel_name']}' (channel {post['channel_id']}):\n"
+                discourse_hint += f"   {post['author']} said: \"{post['content']}...\"\n"
+                discourse_hint += f"   -> You could POST_MESSAGE to this channel and reference {post['author']} by name!\n"
+        elif channel_count > 0:
+            discourse_hint = "\n** Channels exist but no recent posts. Share your thoughts to start a conversation! **"
+        else:
             discourse_hint = "\n** NO CHANNELS YET: Be a leader - create a channel to start discussions! **"
 
         return f"""Current Market State:
@@ -162,7 +184,14 @@ Based on your personality, current wealth (${self.wealth:,.2f}), and the market 
 
 Consider BOTH trading AND discourse:
 - MARKETPLACE: What items are worth buying? Should you list something?
-- DISCOURSE: What channels have interesting discussions? Should you post your thoughts or create a new channel?
+- DISCOURSE: What channels have interesting discussions? Should you post your thoughts or RESPOND to another agent's post?
+
+RESPONDING TO OTHER AGENTS:
+When posting, reference other agents by name to create real conversations!
+Examples:
+- "I disagree with Agent_042's analysis because..."
+- "Building on what Agent_015 said, I think..."
+- "@Agent_023, interesting point! Have you considered..."
 
 Balance your actions - successful agents both trade AND participate in discourse.
 

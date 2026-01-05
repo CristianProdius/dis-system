@@ -46,92 +46,248 @@ function Navbar({ mode, setMode }) {
     navLinks.push({ to: '/marketplace', label: 'Marketplace', icon: <StoreIcon /> });
     navLinks.push({ to: '/discourse', label: 'Discourse', icon: <ForumIcon /> });
     navLinks.push({ to: '#', label: 'Grafana', icon: <MonitorIcon />, action: openGrafana });
-    navLinks.push({ to: '#', label: 'Logout', icon: <LogoutIcon />, action: handleLogout });
+    navLinks.push({ to: '#', label: 'Logout', icon: <LogoutIcon />, action: handleLogout, isLogout: true });
   } else {
     navLinks.push({ to: '/login', label: 'Login', icon: <LoginIcon /> });
     navLinks.push({ to: '/register', label: 'Register', icon: <PersonAddIcon /> });
   }
 
-  const activeColor = '#8B4513';
-
   return (
     <>
-      <AppBar position="static">
+      <AppBar position="sticky">
         <Toolbar>
-          <IconButton sx={{ mr: 2, display: { xs: 'block', md: 'none' } }} color="inherit" onClick={() => setDrawerOpen(true)}>
+          <IconButton
+            sx={{
+              mr: 2,
+              display: { xs: 'flex', md: 'none' },
+            }}
+            color="inherit"
+            onClick={() => setDrawerOpen(true)}
+          >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600, display: { xs: 'none', md: 'block' } }}>
-            Capitalism Simulation
-          </Typography>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600, display: { xs: 'block', md: 'none' } }}>
-            CapSim
-          </Typography>
-          <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)',
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>CS</Typography>
+            </Box>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                display: { xs: 'none', md: 'block' },
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              Capitalism Simulation
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                display: { xs: 'block', md: 'none' },
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              CapSim
+            </Typography>
+          </Box>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5 }}>
             {navLinks.map(link => {
               const isActive = location.pathname === link.to;
-              const isLogout = link.label === 'Logout';
               const buttonStyle = {
-                mr: 1,
-                borderRadius: 0,
-                borderBottom: isActive ? '2px solid white' : 'none',
-                ...(isLogout && { color: 'red' }),
+                px: 2,
+                py: 1,
+                borderRadius: '12px',
+                position: 'relative',
+                color: link.isLogout ? '#EF4444' : 'inherit',
+                ...(isActive && {
+                  background: 'rgba(139, 92, 246, 0.15)',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: 4,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '60%',
+                    height: '2px',
+                    background: 'linear-gradient(90deg, #8B5CF6, #06B6D4)',
+                    borderRadius: '2px',
+                  },
+                }),
+                '&:hover': {
+                  background: link.isLogout
+                    ? 'rgba(239, 68, 68, 0.1)'
+                    : 'rgba(139, 92, 246, 0.1)',
+                },
               };
 
               if (link.action) {
                 return (
-                  <Button key={link.label} color="inherit" startIcon={link.icon} onClick={link.action} sx={buttonStyle}>
+                  <Button
+                    key={link.label}
+                    color="inherit"
+                    startIcon={link.icon}
+                    onClick={link.action}
+                    sx={buttonStyle}
+                  >
                     {link.label}
                   </Button>
                 );
               } else {
                 return (
-                  <Button key={link.to} component={Link} to={link.to} color="inherit" startIcon={link.icon} sx={buttonStyle}>
+                  <Button
+                    key={link.to}
+                    component={Link}
+                    to={link.to}
+                    color="inherit"
+                    startIcon={link.icon}
+                    sx={buttonStyle}
+                  >
                     {link.label}
                   </Button>
                 );
               }
             })}
           </Box>
-          <IconButton color="inherit" onClick={handleToggleMode} sx={{ mr: { xs: 0, md: 2 } }}>
+          <IconButton
+            color="inherit"
+            onClick={handleToggleMode}
+            sx={{
+              ml: 1,
+              background: mode === 'light'
+                ? 'rgba(139, 92, 246, 0.1)'
+                : 'rgba(6, 182, 212, 0.1)',
+              '&:hover': {
+                background: mode === 'light'
+                  ? 'rgba(139, 92, 246, 0.2)'
+                  : 'rgba(6, 182, 212, 0.2)',
+              },
+            }}
+          >
             {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
           </IconButton>
         </Toolbar>
       </AppBar>
       <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <List sx={{ width: 250 }}>
-          {navLinks.map(link => {
-            const isActive = location.pathname === link.to;
-            const isLogout = link.label === 'Logout';
-            const listItemStyles = {
-              color: isActive ? activeColor : 'inherit',
-              ...(isLogout && { color: 'red' }),
-            };
+        <Box sx={{ width: 280, pt: 2 }}>
+          <Box sx={{ px: 2, pb: 2, mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                <Typography sx={{ fontWeight: 700, fontSize: '16px', color: '#fff' }}>CS</Typography>
+              </Box>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                CapSim
+              </Typography>
+            </Box>
+          </Box>
+          <List>
+            {navLinks.map(link => {
+              const isActive = location.pathname === link.to;
+              const listItemStyles = {
+                mx: 1,
+                borderRadius: '12px',
+                mb: 0.5,
+                color: link.isLogout ? '#EF4444' : 'inherit',
+                ...(isActive && {
+                  background: 'rgba(139, 92, 246, 0.15)',
+                }),
+                '&:hover': {
+                  background: link.isLogout
+                    ? 'rgba(239, 68, 68, 0.1)'
+                    : 'rgba(139, 92, 246, 0.1)',
+                },
+              };
 
-            if (link.action) {
-              return (
-                <ListItemButton
-                  key={link.label}
-                  onClick={() => {
-                    setDrawerOpen(false);
-                    link.action();
-                  }}
-                  sx={listItemStyles}
-                >
-                  <ListItemIcon sx={listItemStyles}>{link.icon}</ListItemIcon>
-                  <ListItemText primary={link.label} />
-                </ListItemButton>
-              );
-            } else {
-              return (
-                <ListItemButton key={link.to} component={Link} to={link.to} onClick={() => setDrawerOpen(false)} sx={listItemStyles}>
-                  <ListItemIcon sx={listItemStyles}>{link.icon}</ListItemIcon>
-                  <ListItemText primary={link.label} />
-                </ListItemButton>
-              );
-            }
-          })}
-        </List>
+              const iconStyles = {
+                color: isActive ? '#8B5CF6' : link.isLogout ? '#EF4444' : 'inherit',
+                minWidth: 40,
+              };
+
+              if (link.action) {
+                return (
+                  <ListItemButton
+                    key={link.label}
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      link.action();
+                    }}
+                    sx={listItemStyles}
+                  >
+                    <ListItemIcon sx={iconStyles}>{link.icon}</ListItemIcon>
+                    <ListItemText
+                      primary={link.label}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    />
+                  </ListItemButton>
+                );
+              } else {
+                return (
+                  <ListItemButton
+                    key={link.to}
+                    component={Link}
+                    to={link.to}
+                    onClick={() => setDrawerOpen(false)}
+                    sx={listItemStyles}
+                  >
+                    <ListItemIcon sx={iconStyles}>{link.icon}</ListItemIcon>
+                    <ListItemText
+                      primary={link.label}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    />
+                  </ListItemButton>
+                );
+              }
+            })}
+          </List>
+        </Box>
       </Drawer>
     </>
   );

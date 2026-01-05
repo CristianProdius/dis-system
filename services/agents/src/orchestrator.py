@@ -218,9 +218,9 @@ class AgentOrchestrator:
             )
             channels_data = channels_response.json() if channels_response.status_code == 200 else {"channels": []}
 
-            # Fetch recent posts from top 3 channels so agents can see discussions
+            # Fetch recent posts from top 5 channels so agents can see discussions and respond
             channels_list = channels_data.get("channels", [])
-            for channel in channels_list[:3]:  # Only fetch from first 3 channels
+            for channel in channels_list[:5]:  # Fetch from first 5 channels for more conversation context
                 try:
                     channel_detail = await self.http_client.get(
                         f"{self.gateway_url}/discourse/channel/{channel['id']}",
@@ -228,8 +228,15 @@ class AgentOrchestrator:
                     )
                     if channel_detail.status_code == 200:
                         detail_data = channel_detail.json()
-                        # Add recent posts to channel data (limit to 5 most recent)
-                        channel["recent_posts"] = detail_data.get("posts", [])[:5]
+                        posts = detail_data.get("posts", [])[:8]  # Get more posts for context
+                        # Ensure posts have clear author attribution for agent responses
+                        for post in posts:
+                            # Normalize author field (could be author_id or authorId)
+                            if "authorId" not in post and "author_id" in post:
+                                post["authorId"] = post["author_id"]
+                            elif "author_id" not in post and "authorId" in post:
+                                post["author_id"] = post["authorId"]
+                        channel["recent_posts"] = posts
                 except Exception:
                     pass  # Skip if fetching channel details fails
 
